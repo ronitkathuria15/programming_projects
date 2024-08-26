@@ -1,0 +1,49 @@
+<html>
+  <style>
+    body{ 
+      font-size: 15pt;
+      font-family: arial;
+    }
+  </style>
+  <head>
+    <title>Pitcher Statistics</title>
+  </head>
+  <body>
+    <h1>Sort Pitcher Statistics:</h1>
+    <form method="POST">
+      <label>Sort by:</label>
+      <select name="sort_by">
+        <option value="era">ERA</option>
+        <option value="whip">WHIP</option>
+        <option value="wins">Wins</option>
+        <option value="losses">Losses</option>
+      </select>
+      <input type="submit" value="Sort">
+    </form>
+    <br><br>
+    <table border="1">
+      <tr>
+        <th>First Name</th>
+        <th>Last Name</th>
+        <th>Games Played</th>
+        <th>Wins</th>
+        <th>Losses</th>
+        <th>ERA</th>
+        <th>WHIP</th>
+        <th>Innings Pitched</th>
+      </tr>
+      {% for result in results %}
+        <tr>
+          <td>{{ result[0] }}</td>
+          <td>{{ result[0] }}</td>
+          <td>{{ result[1] }}</td>
+          <td>{{ result[2] }}</td>
+          <td>{{ result[3] }}</td>
+          <td>{{ result[4] }}</td>
+          <td>{{ result[5] }}</td>
+          <td>{{ result[6] }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+  </body>
+</html>

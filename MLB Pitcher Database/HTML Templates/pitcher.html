@@ -1,0 +1,80 @@
+<html>
+  <style>
+    body{ 
+      font-size: 15pt;
+      font-family: arial;
+    }
+  </style>
+  <head>
+    <title>MLB Pitchers</title>
+  </head>
+  <body>
+    <h1>MLB Pitcher Data:</h1>
+    <form method="POST">
+      <label>Country:</label>
+      <input type="text" name="country"><br><br>
+      <label>Pitching Hand:</label>
+      <input type="text" name="hand"><br><br>
+      <label>Injury:</label>
+      <input type="checkbox" name="has_injury"><br><br>
+      <label>Sort By:</label>
+      <select name="sort_by">
+        <option value="height">Height</option>
+        <option value="weight">Weight</option>
+        <option value="annual_salary">Annual Salary</option>
+      </select>
+      <br>
+      <label>Order:</label>
+      <select name="sort_order">
+        <option value="asc">Ascending</option>
+        <option value="desc">Descending</option>
+      </select>
+      <input type="submit" value="Filter">
+    </form>
+    <br><br>
+    <table border="1">
+      <tr>
+        <th>First Name</th>
+        <th>Last Name</th>
+        <th>Height</th>
+        <th>Weight</th>
+        <th>DOB</th>
+        <th>Debut Date</th>
+        <th>Pitching Hand</th>
+        <th>Age</th>
+        <th>Team Name</th>
+        <th>Country</th>
+        <th>College</th>
+        <th>Injury ID</th>
+        <th>Injury Description</th>
+        <th>Recovery Time</th>
+        <th>Annual Salary</th>
+        <th>Start Date</th>
+        <th>End Date</th>
+        <th>Years Remaining</th>
+      </tr>
+      {% for team in teams %}
+        <tr>
+          <td>{{ pitcher.first_name }}</td>
+          <td>{{ pitcher.last_name }}</td>
+          <td>{{ pitcher.height }}</td>
+          <td>{{ pitcher.weight }}</td>
+          <td>{{ pitcher.DOB }}</td>
+          <td>{{ pitcher.debut_date }}</td>
+          <td>{{ pitcher.pitching_hand }}</td>
+          <td>{{ pitcher.age }}</td>
+          <td>{{ pitcher.team_name }}</td>
+          <td>{{ pitcher.country_name }}</td>
+          <td>{{ pitcher.college }}</td>
+          <td>{{ pitcher.injury_ID }}</td>
+          <td>{{ pitcher.injury_description }}</td>
+          <td>{{ pitcher.recovery_time }}</td>
+          <td>{{ pitcher.annual_salary }}</td>
+          <td>{{ pitcher.start_date }}</td>
+          <td>{{ pitcher.end_date }}</td>
+          <td>{{ pitcher.years_remaining }}</td>
+      {% endfor %}
+    </table>
+  </body>
+  <p><a href="index">Go to the home page</a></p>
+</html>

@@ -1,0 +1,217 @@
+library(readr) 
+library(dplyr)
+library(lubridate) 
+library(car) 
+library(MASS) 
+library(ggplot2)
+library(knitr)
+
+generic_path <- "/Users/ronitkathuria/Downloads/archive"
+
+# Now append the specific CSV file name
+club_games_path <- file.path(generic_path, "club_games.csv")
+games_path <- file.path(generic_path, "games.csv")
+player_valuations_path <- file.path(generic_path, "player_valuations.csv")
+
+# Reading in necessary data
+club_games <- read_csv(club_games_path)
+games <- read_csv(games_path)
+
+# Consider that European Seasons go from August to July. So if a valuation is in 
+# 09/2020 or 01/2021 it will be considered as 2020 season. This goes along the 
+# standard used by the data, like the games.csv file.
+
+player_valuations <- read_csv(player_valuations_path) %>%
+  dplyr::arrange(player_id, date) %>%
+  dplyr::select(player_id, date, market_value_in_eur, current_club_id) %>%
+  dplyr::mutate(market_value_in_eur = market_value_in_eur/1000,                  # to normalize the numbers
+         date = ymd(date),
+         year = year(date),
+         season = if_else(month(date) < 8, year - 1, year))
+
+# Get the last valuation for each player for each season
+player_valuations <- player_valuations %>%
+  group_by(player_id, season) %>%
+  filter(date == max(date)) %>%
+  ungroup()
+
+player_valuations
+
+# Make the player valuations a club valuation by grouping player valuations.
+# Average valuation for each club for each season
+club_valuations <- player_valuations %>%
+  group_by(current_club_id, season) %>%
+  summarize(average_valuation = mean(market_value_in_eur, na.rm = TRUE)) %>%
+  ungroup()
+
+club_valuations
+
+# Read and preprocess club games
+# We will get each team's game, and compute if it's:
+
+# 0 = loss      -- already defined in the is_win column
+# 1 = win       -- already defined in the is_win column
+# 2 = draw
+# Update the 'is_win' column with 2 for the rows where an equal number of goals were scored.
+club_games <- read_csv(club_games_path) %>%
+  dplyr::mutate(is_win = if_else(own_goals == opponent_goals, 2, is_win)) %>%
+  dplyr::select(game_id, club_id, is_win)
+
+# Read and join games data
+games <- read_csv(games_path) %>%
+  dplyr::select(game_id, season)
+
+club_games <- left_join(club_games, games, by = "game_id")
+
+# Calculate points
+# To compute the performance of each team for a given season.
+# We can use the points system used in most football league competitions.
+#  Loss = 0 points. Draw = 1 point. Win = 3 points.
+calculate_points <- function(is_win) {
+  case_when(
+    is_win == 0 ~ 0,
+    is_win == 1 ~ 3,
+    is_win == 2 ~ 1,
+    TRUE ~ NA_real_
+  )
+}
+
+# We want to create a percentage of possible points and points 
+# earned across all the games for each club during a given season
+club_games <- club_games %>%
+  mutate(points = calculate_points(is_win),
+         possible_points = 3)
+
+# Aggregate to get season performance
+club_seasons <- club_games %>%
+  group_by(club_id, season) %>%
+  summarize(total_points = sum(points, na.rm = TRUE),
+            possible_points = sum(possible_points, na.rm = TRUE),
+            points_pct = total_points / possible_points) %>%
+  filter(possible_points >= 30) %>%
+  ungroup()
+
+
+# Merge club performance data with valuations
+valuations_points_pct <- left_join(club_seasons, club_valuations, 
+                                   by = c("club_id" = "current_club_id", "season" = "season"))
+valuations_points_pct
+
+#Simple Linear Regression model
+model <- lm(points_pct ~ average_valuation, data = valuations_points_pct)
+
+summary(model)
+
+coeffs <- coef(model)
+intercept <- coeffs[1]
+slope <- coeffs[2]
+equation <- paste("y =", intercept, "+", slope, "x")
+equation
+
+# Try a bunch of transformations, including quadratic and cubic
+transform_list <- list(
+  log = function(x) log(x + 1),                # Log transformation
+  sqrt = function(x) sqrt(x),                  # Square root transformation
+  reciprocal = function(x) 1/x,                # Reciprocal transformation
+  quadratic = function(x) I(x^2),              # Quadratic transformation
+  cubic = function(x) I(x^3)                   # Cubic transformation
+)
+
+# Apply transformations, fit models, and store them in a list
+models <- list()
+summaries <- list()
+for (trans_name in names(transform_list)) {
+  transformed_val <- transform_list[[trans_name]](valuations_points_pct$average_valuation)
+  model <- lm(points_pct ~ transformed_val, data = valuations_points_pct)
+  models[[trans_name]] <- model
+  summaries[[trans_name]] <- summary(model)
+}
+
+# Calculate AIC and BIC for each model and print the summaries
+aic_values <- numeric(length(models))
+bic_values <- numeric(length(models))
+names(aic_values) <- names(bic_values) <- names(models)
+
+for (trans_name in names(models)) {
+  model <- models[[trans_name]]
+  aic_values[trans_name] <- AIC(model)
+  bic_values[trans_name] <- BIC(model)
+  print(paste("Summary for transformation:", trans_name))
+  print(summaries[[trans_name]])
+}
+
+
+# Combine the AIC and BIC values into a data frame for pretty printing
+model_comparison <- data.frame(
+  Transformation = names(aic_values),
+  AIC = aic_values,
+  BIC = bic_values
+)
+
+# Sort the data frame by AIC values
+model_comparison <- model_comparison[order(model_comparison$AIC),]
+
+# Use kable to create a nice-looking table
+kable(model_comparison, format = "markdown", caption = "AIC and BIC Values for Model Transformations")
+
+
+# Find the best transformation based on AIC
+best_aic <- which.min(aic_values)
+best_transformation <- names(best_aic)
+print(paste("Best model based on AIC is with transformation:", best_transformation))
+
+# Perform Box-Cox transformation
+bc <- boxCox(valuations_points_pct$average_valuation ~ valuations_points_pct$points_pct, 
+             lambda = seq(-2, 2, by = 0.1))
+
+# Determine the lambda value for the best transformation
+best_lambda <- bc$x[which.max(bc$y)]
+print(paste("Best lambda for Box-Cox transformation:", best_lambda))
+
+# Fit the model with the Box-Cox transformed predictor
+valuations_points_pct$boxcox_valuation <- (valuations_points_pct$average_valuation^best_lambda - 1) / best_lambda
+boxcox_model <- lm(points_pct ~ boxcox_valuation, data = valuations_points_pct)
+print(summary(boxcox_model))
+
+# Plot for Simple Linear Regression (SLR)
+ggplot(valuations_points_pct, aes(x = average_valuation, y = points_pct)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", col = "blue") +
+  labs(title = "SLR: Points Percentage vs Average Valuation",
+       x = "Average Valuation (in thousands)",
+       y = "Points Percentage") +
+  theme_minimal()
+
+# Plot for log-transformed model
+valuations_points_pct$log_valuation <- log(valuations_points_pct$average_valuation + 1)
+ggplot(valuations_points_pct, aes(x = log_valuation, y = points_pct)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", col = "blue") +
+  labs(title = "Log-Transformed Model: Points Percentage vs Log of Average Valuation",
+       x = "Log of Average Valuation",
+       y = "Points Percentage") +
+  theme_minimal()
+
+# Plot for Box-Cox lambda-transformed model
+valuations_points_pct$lambda_valuation <- (valuations_points_pct$average_valuation^(-0.141414141414141) - 1) / (-0.141414141414141)
+ggplot(valuations_points_pct, aes(x = lambda_valuation, y = points_pct)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", col = "blue") +
+  labs(title = "Box-Cox Lambda-Transformed Model: Points Percentage vs Lambda Transformed Valuation",
+       x = "Lambda Transformed Valuation",
+       y = "Points Percentage") +
+  theme_minimal()
+
+
+# QQ Plot of studentized residuals
+qqPlot(model, main = "QQ Plot of Studentized Deleted Residuals")
+
+res <- rstudent(model)
+hist(res, main="Histogram of Studentized Deleted Residuals", xlab="Studentized Deleted Residuals")
+
+plot(res, type="l", main="Line Plot of Studentized Deleted Residuals", ylab="Studentized Deleted Residuals")
+
+pred_values <- fitted(model)
+plot(pred_values, res, main="Residuals vs. Predicted Values", xlab="Predicted Values y hat", ylab="Studentized Deleted Residuals")
+abline(h=0, col="red")
+

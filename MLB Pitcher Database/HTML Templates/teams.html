@@ -1,0 +1,47 @@
+
+<html>
+  <style>
+    body{ 
+      font-size: 15pt;
+      font-family: arial;
+    }
+  </style>
+  <head>
+    <title>Teams</title>
+  </head>
+  <body>
+    <h1>Filters:</h1>
+    <form method="POST">
+      <label>City:</label>
+      <input type="text" name="city"><br><br>
+      <label>League:</label>
+      <input type="text" name="league"><br><br>
+      <label>Playoffs:</label>
+      <input type="text" name="playoffs_id"><br><br>
+      <input type="submit" value="Filter">
+    </form>
+    <br><br>
+    <table border="1">
+      <tr>
+        <th>Team Name</th>
+        <th>City</th>
+        <th>State</th>
+        <th>2022 Wins</th>
+        <th>Manager Name</th>
+        <th>League</th>
+        <th>Playoff ID</th>
+      </tr>
+      {% for team in teams %}
+        <tr>
+          <td>{{ team[0] }}</td>
+          <td>{{ team[1] }}</td>
+          <td>{{ team[2] }}</td>
+          <td>{{ team[3] }}</td>
+          <td>{{ team[4] }}</td>
+          <td>{{ team[5] }}</td>
+	  <td>{{ team[6] }}</td>
+      {% endfor %}
+    </table>
+  </body>
+  <p><a href="pitcher">Go to the pitchers page</a></p>
+</html>
