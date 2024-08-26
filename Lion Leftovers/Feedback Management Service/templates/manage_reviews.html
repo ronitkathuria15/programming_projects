@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Manage Reviews</title>
+</head>
+<body>
+    <h1>Manage Reviews</h1>
+    <table border="1">
+        <tr>
+            <th>Review ID</th>
+            <th>Student UNI</th>
+            <th>Order ID</th>
+            <th>Rating</th>
+            <th>Comment</th>
+            <th>Review Time</th>
+            <th>Delete</th>
+        </tr>
+        {% for review in reviews %}
+        <tr>
+            <td>{{ review[0] }}</td>
+            <td>{{ review[1] }}</td>
+            <td>{{ review[2] }}</td>
+            <td>{{ review[3] }}</td>
+            <td>{{ review[4] }}</td>
+            <td>{{ review[5] }}</td>
+            <td>
+                <form action="{{ url_for('delete_review', review_id=review[0]) }}" method="post">
+                    <input type="submit" value="Delete" onclick="return confirm('Are you sure?');">
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>

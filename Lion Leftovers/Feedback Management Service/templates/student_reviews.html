@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Student Reviews</title>
+</head>
+<body>
+    <h1>Student Reviews</h1>
+    <p><a href="{{ url_for('add_review') }}">Add New Review</a></p>
+
+    <table border="1">
+        <tr>
+            <th>Review ID</th>
+            <th>Student UNI</th>
+            <th>Order ID</th>
+            <th>Rating</th>
+            <th>Comment</th>
+            <th>Review Time</th>
+            <th>Actions</th>
+        </tr>
+        {% for review in reviews %}
+        <tr>
+            <td>{{ review[0] }}</td>
+            <td>{{ review[1] }}</td>
+            <td>{{ review[2] }}</td>
+            <td>{{ review[3] }}</td>
+            <td>{{ review[4] }}</td>
+            <td>{{ review[5] }}</td>
+            <td>
+                <a href="{{ url_for('edit_review', review_id=review[0]) }}">Edit</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>

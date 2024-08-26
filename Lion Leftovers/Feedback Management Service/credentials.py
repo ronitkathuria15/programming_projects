@@ -1,0 +1,2 @@
+PASSWORD = "MasterPassword"
+USER = "master"
